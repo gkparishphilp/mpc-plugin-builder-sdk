@@ -471,6 +471,11 @@ private:
 // TUI.json measures from the top left, so flip the view and the coordinates match one for one.
 - (BOOL)isFlipped { return YES; }
 
+// A plugin window in a DAW is usually not the key window. By default AppKit swallows the first
+// click into an inactive window - it only raises it - so a control would need clicking twice, and
+// whichever control you reached for first would seem dead. Take that click.
+- (BOOL)acceptsFirstMouse:(NSEvent*)event { (void)event; return YES; }
+
 - (float)valueOf:(int)param
 {
     if (param < 0 || param >= _host.numParams || _host.getParam == nullptr) return 0.0f;
