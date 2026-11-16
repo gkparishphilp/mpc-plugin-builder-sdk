@@ -599,12 +599,37 @@ private:
             case Widget::kBar:
             {
                 const float v = [self valueOf:w.param];
+                // NSRectFill composites with Copy, so a translucent colour does not blend over
+                // the panel - it replaces those pixels, alpha and all, punching a hole through
+                // the background. On screen that hole shows the host's window behind it, which
+                // is why this read as a grey box in a dark DAW and as a white one in a saved
+                // image. SourceOver blends it instead, which is what was meant all along.
                 [[NSColor colorWithWhite:1.0 alpha:0.15] setFill];
-                NSRectFill(w.bounds);
+                NSRectFillUsingOperation(w.bounds, NSCompositingOperationSourceOver);
                 NSRect fill = w.bounds;
                 fill.size.width *= v;
-                [(w.colour != nil ? w.colour : NSColor.whiteColor) setFill];
-                NSRectFill(fill);
+                NSColor* barColour = (w.colour != nil ? w.colour : NSColor.whiteColor);
+                [[barColour colorWithAlphaComponent:0.40] setFill];
+                NSRectFillUsingOperation(fill, NSCompositingOperationSourceOver);
+
+                // gen_ui.py gives a Slider no Label children of its own, because on the MPC the
+                // Slider component draws its own name and value - the skin format calls it "the
+                // generic name + value bar". Nothing was drawing that here, so every parameter
+                // laid out as a slider came up as an empty box: no name, no reading, just a bar.
+                // Every other widget (knob, fader, toggle, radio) ships explicit Labels and so
+                // looked right, which is what made this easy to miss.
+                if (w.param >= 0)
+                {
+                    Widget t = w;
+                    t.bounds = NSInsetRect(w.bounds, 14.0, 0.0);
+                    t.fontSize = 22.0;
+                    t.colour = [NSColor colorWithWhite:1.0 alpha:0.72];
+                    t.align = NSTextAlignmentLeft;
+                    [self drawText:[self nameOf:w.param] in:t];
+                    t.colour = NSColor.whiteColor;
+                    t.align = NSTextAlignmentRight;
+                    [self drawText:[self displayOf:w.param] in:t];
+                }
                 break;
             }
         }
