@@ -720,9 +720,15 @@ private:
     {
         int steps = _host.getSteps != nullptr ? _host.getSteps(_host.ctx, c->param) : 0;
         if (steps < 2) steps = c->buttonsInGroup;
-        if (steps < 2)
+        // A button alone in its group is a TOGGLE, whatever the parameter says its step count
+        // is. That is how the skin format spells a switch - gen_ui.py emits numButtonsInGroup 1
+        // for every bool - so the group size is the authority here and the parameter is not.
+        // Asking the parameter instead gets 2 back from any bool, which skips this branch and
+        // sends buttonId / (steps - 1) = 1 / 1 = 1.0 on every click: the switch lights on the
+        // first tap and can never be cleared. Drawing was unaffected, which is what made it
+        // look like the skin rather than the editor.
+        if (c->buttonsInGroup <= 1 || steps < 2)
         {
-            // A lone pill with nothing to say about its group: treat it as an on/off toggle.
             [self setValue:([self valueOf:c->param] > 0.5f ? 0.0f : 1.0f) of:c->param];
             return;
         }
